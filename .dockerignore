@@ -1,0 +1,31 @@
+# Dependencies & build output (cài/build lại trong image)
+node_modules
+dist
+*.tsbuildinfo
+
+# Secrets — TUYỆT ĐỐI không đưa vào image layer
+.env
+.env.*
+*firebase-adminsdk*.json
+
+# Git & metadata
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Logs / coverage / OS
+*.log
+coverage
+.DS_Store
+
+# Tài liệu & dev-only
+DEPLOY.md
+README.md
+*.md
+scratchpad
+.vscode
+.idea

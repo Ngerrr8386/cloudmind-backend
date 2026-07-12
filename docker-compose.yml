@@ -1,0 +1,49 @@
+# =========================================================
+#  CloudMind Backend — docker compose (deploy 1 host)
+#  DB dùng MongoDB Atlas (cloud) nên KHÔNG cần service mongo.
+#  Chạy:   docker compose up -d --build
+#  Log:    docker compose logs -f api
+#  Tắt:    docker compose down
+# =========================================================
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cloudmind-backend:latest
+    container_name: cloudmind-backend
+    restart: unless-stopped
+
+    # NODE_ENV/PORT set ở đây -> dotenv KHÔNG ghi đè (giữ production)
+    environment:
+      NODE_ENV: production
+      PORT: 4100
+
+    # Mount .env read-only để chính dotenv của app parse (giống hệt local):
+    # tránh lỗi quote/xuống dòng của FIREBASE_PRIVATE_KEY khi dùng env_file.
+    # File .env KHÔNG nằm trong image (đã .dockerignore) -> secret không bị bake.
+    volumes:
+      - ./.env:/app/.env:ro
+
+    ports:
+      - "4100:4100"
+
+    # init: true -> nhận tín hiệu dừng sạch (bổ trợ cho dumb-init)
+    init: true
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:'+(process.env.PORT||4100)+'/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 25s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
