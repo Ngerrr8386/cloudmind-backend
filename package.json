@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "seed": "tsx src/scripts/seed.ts",
+    "migrate:folders": "tsx src/scripts/migrate-folder-status.ts",
     "docs:gen": "node scripts/gen-openapi.mjs"
   },
   "dependencies": {

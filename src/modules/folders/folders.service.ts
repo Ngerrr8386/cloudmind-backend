@@ -13,6 +13,7 @@ interface FolderWithStats {
   workspaceId: string | null
   fileCount: number
   size: number
+  trashedAt: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -26,9 +27,13 @@ async function folderStats(owner: string): Promise<Map<string, { count: number; 
   return new Map(rows.map((r) => [String(r._id), { count: r.count, size: r.size }]))
 }
 
-export async function listFolders(owner: string): Promise<FolderWithStats[]> {
+export async function listFolders(
+  owner: string,
+  opts: { trashed?: boolean } = {},
+): Promise<FolderWithStats[]> {
+  const status = opts.trashed ? 'trashed' : 'active'
   const [folders, stats] = await Promise.all([
-    Folder.find({ owner }).sort({ createdAt: 1 }).lean(),
+    Folder.find({ owner, status }).sort({ createdAt: 1 }).lean(),
     folderStats(owner),
   ])
   return folders.map((f) => {
@@ -42,6 +47,7 @@ export async function listFolders(owner: string): Promise<FolderWithStats[]> {
       workspaceId: f.workspaceId ? String(f.workspaceId) : null,
       fileCount: s?.count ?? 0,
       size: s?.size ?? 0,
+      trashedAt: f.trashedAt ?? null,
       createdAt: f.createdAt,
       updatedAt: f.updatedAt,
     }
@@ -107,9 +113,28 @@ export async function updateFolder(
   return folder.toJSON()
 }
 
+/** Xoá mềm: đưa thư mục vào Thùng rác (có thể khôi phục). File & thư mục con giữ nguyên
+ *  (thư mục con tạm hiển thị ở gốc cho tới khi khôi phục thư mục cha). */
 export async function deleteFolder(owner: string, id: string): Promise<void> {
   const folder = await findOwned(owner, id)
-  // Đưa file trong thư mục về gốc, reparent thư mục con lên cha của thư mục bị xoá
+  if (folder.status === 'trashed') return // idempotent
+  folder.status = 'trashed'
+  folder.trashedAt = new Date()
+  await folder.save()
+}
+
+/** Khôi phục thư mục từ Thùng rác về đúng vị trí cũ (parentId giữ nguyên). */
+export async function restoreFolder(owner: string, id: string) {
+  const folder = await findOwned(owner, id)
+  folder.status = 'active'
+  folder.trashedAt = null
+  await folder.save()
+  return folder.toJSON()
+}
+
+/** Xoá vĩnh viễn: đưa file trong thư mục về gốc, reparent thư mục con lên cha, rồi xoá hẳn. */
+export async function permanentDeleteFolder(owner: string, id: string): Promise<void> {
+  const folder = await findOwned(owner, id)
   await File.updateMany({ owner, folderId: id }, { $set: { folderId: null } })
   await Folder.updateMany({ owner, parentId: id }, { $set: { parentId: folder.parentId ?? null } })
   await folder.deleteOne()

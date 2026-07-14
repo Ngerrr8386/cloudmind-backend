@@ -12,6 +12,8 @@ router.get('/tree', c.tree)
 router.post('/', validate(createFolderSchema), c.create)
 router.get('/:id', c.get)
 router.patch('/:id', validate(updateFolderSchema), c.update)
+router.post('/:id/restore', c.restore)
+router.delete('/:id/permanent', c.permanent)
 router.delete('/:id', c.remove)
 
 export default router

@@ -9,6 +9,7 @@ import billingRoutes from './modules/billing/billing.routes'
 import webhookRoutes from './modules/billing/webhook.routes'
 import workspaceRoutes from './modules/workspaces/workspace.routes'
 import invitesRoutes from './modules/workspaces/invites.routes'
+import sharesRoutes from './modules/shares/shares.routes'
 import dashboardRoutes from './modules/dashboard/dashboard.routes'
 import notificationRoutes from './modules/notifications/notifications.routes'
 import adminRoutes from './modules/admin/admin.routes'
@@ -26,6 +27,7 @@ api.use('/', billingRoutes) // /plans, /subscription, /billing/invoices
 api.use('/webhooks', webhookRoutes) // /webhooks/payment (PayOS)
 api.use('/workspaces', workspaceRoutes)
 api.use('/invites', invitesRoutes)
+api.use('/shares', sharesRoutes) // /shares/:token — công khai, xem/tải file qua link chia sẻ
 api.use('/dashboard', dashboardRoutes)
 api.use('/', notificationRoutes) // /activity, /notifications
 api.use('/admin', adminRoutes)

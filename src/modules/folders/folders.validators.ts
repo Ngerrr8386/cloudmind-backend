@@ -22,4 +22,5 @@ export const updateFolderSchema = z
 
 export const listFoldersQuery = z.object({
   scope: z.enum(['personal', 'workspace']).optional(),
+  trashed: z.coerce.boolean().optional(),
 })

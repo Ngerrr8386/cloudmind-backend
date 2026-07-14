@@ -15,6 +15,8 @@ export interface IFolder {
   tone: Tone
   parentId?: Types.ObjectId | null
   permissions: IFolderPermission[]
+  status: 'active' | 'trashed'
+  trashedAt?: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -27,6 +29,8 @@ const folderSchema = new Schema<IFolder>(
     icon: { type: String, default: 'Folder' },
     tone: { type: String, default: 'indigo' },
     parentId: { type: Schema.Types.ObjectId, ref: 'Folder', default: null },
+    status: { type: String, enum: ['active', 'trashed'], default: 'active', index: true },
+    trashedAt: { type: Date, default: null },
     permissions: [
       {
         _id: false,
