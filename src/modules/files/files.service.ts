@@ -3,6 +3,7 @@ import type { FilterQuery } from 'mongoose'
 import { File, type IFile } from '../../models/File'
 import { Share } from '../../models/Share'
 import { User } from '../../models/User'
+import { WorkspaceMember } from '../../models/WorkspaceMember'
 import { ApiError } from '../../utils/ApiError'
 import { inferFileType, toneForType } from '../../utils/fileType'
 import {
@@ -23,6 +24,22 @@ async function findOwned(owner: string, id: string) {
   const file = await File.findOne({ _id: id, owner })
   if (!file) throw ApiError.notFound('Không tìm thấy file')
   return file
+}
+
+/**
+ * File được phép ĐỌC (tải/xem): của chính mình, hoặc thuộc không gian nhóm mà mình là thành viên.
+ * Chỉ dùng cho thao tác chỉ-đọc — sửa/xoá/chia sẻ vẫn đi qua findOwned (chỉ chủ file).
+ */
+async function findReadable(userId: string, id: string) {
+  const file = await File.findById(id)
+  if (!file) throw ApiError.notFound('Không tìm thấy file')
+  if (String(file.owner) === userId) return file
+  if (file.workspaceId && file.status !== 'trashed') {
+    const isMember = await WorkspaceMember.exists({ workspace: file.workspaceId, user: userId })
+    if (isMember) return file
+  }
+  // Không tiết lộ file có tồn tại hay không với người ngoài
+  throw ApiError.notFound('Không tìm thấy file')
 }
 
 /** Tăng/giảm dung lượng đã dùng; chặn nếu vượt hạn mức. */
@@ -142,15 +159,15 @@ export async function getFile(owner: string, id: string) {
   return (await findOwned(owner, id)).toJSON()
 }
 
-export async function getDownloadUrl(owner: string, id: string) {
-  const file = await findOwned(owner, id)
+export async function getDownloadUrl(userId: string, id: string) {
+  const file = await findReadable(userId, id)
   if (!file.storageKey || file.status === 'pending') throw ApiError.badRequest('File chưa tải lên xong')
   const url = await createDownloadUrl(file.storageKey, file.name)
   return { url, expiresIn: 3600 }
 }
 
-export async function getPreviewUrl(owner: string, id: string) {
-  const file = await findOwned(owner, id)
+export async function getPreviewUrl(userId: string, id: string) {
+  const file = await findReadable(userId, id)
   if (!file.storageKey || file.status === 'pending') throw ApiError.badRequest('File chưa tải lên xong')
   const url = await createDownloadUrl(file.storageKey) // inline (không attachment)
   return { url, expiresIn: 3600 }
